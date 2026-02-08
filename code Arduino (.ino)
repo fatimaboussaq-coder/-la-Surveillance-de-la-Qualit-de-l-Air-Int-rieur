@@ -1,0 +1,92 @@
+
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <DHT.h>
+
+
+#define DHT_PIN 4           // DHT22 sur GPIO 4
+#define MQ135_PIN 34        // MQ-135 sur GPIO 34
+
+
+#define SEUIL_AIR 1500      // Seuil pollution
+
+
+DHT dht(DHT_PIN, DHT22);    // DHT22 (plus précis que DHT11)
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+
+int air = 0;
+float temp = 0;
+float hum = 0;
+
+void setup() {
+  // Démarrage série
+  Serial.begin(115200);
+  
+  // LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.print("SONDE QUALITE");
+  lcd.setCursor(0, 1);
+  lcd.print("AIR INTERIEUR");
+  delay(2000);
+  
+  // DHT22
+  dht.begin();
+  
+  Serial.println("=== Système démarré ===");
+  Serial.println("Capteur: DHT22 (haute précision)\n");
+}
+
+void loop() {
+  // LIRE CAPTEURS
+  air = analogRead(MQ135_PIN);
+  temp = dht.readTemperature();
+  hum = dht.readHumidity();
+  
+  // AFFICHER LCD
+  lcd.clear();
+  
+  // Ligne 1: Qualité air
+  lcd.setCursor(0, 0);
+  lcd.print("Air:");
+  lcd.print(air);
+  
+  // Statut
+  lcd.setCursor(11, 0);
+  if (air < 1000) {
+    lcd.print("BON");
+  } else if (air < SEUIL_AIR) {
+    lcd.print("MOY");
+  } else {
+    lcd.print("MAU");
+  }
+  
+  // Ligne 2: Temp + Hum
+  lcd.setCursor(0, 1);
+  lcd.print("T:");
+  lcd.print(temp, 1);
+  lcd.print("C");
+  
+  lcd.setCursor(9, 1);
+  lcd.print("H:");
+  lcd.print(hum, 0);
+  lcd.print("%");
+  
+  // AFFICHER SÉRIE
+  Serial.print("Air=");
+  Serial.print(air);
+  Serial.print(" | T=");
+  Serial.print(temp, 1);
+  Serial.print("C | H=");
+  Serial.print(hum, 1);
+  Serial.println("%");
+  
+  // ALERTE POLLUTION (affichage uniquement)
+  if (air > SEUIL_AIR) {
+    Serial.println("ALERTE: Pollution excessive!");
+    Serial.println("Aérer la pièce immédiatement");
+  }
+  
+  delay(2000);
+}
